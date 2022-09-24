@@ -43,6 +43,9 @@ class CallbackWebsocket:
     def on_open(self) -> None:
         print("websocket was opened (override this method to handle)")
 
+    def is_connected(self) -> bool:
+        return self._ws is not None
+
 
 class ReconnectingWebsocket:
 
@@ -71,7 +74,7 @@ class ReconnectingWebsocket:
 
     def _on_close(self) -> None:
         # delete and create new websocket object
-        del self._ws
+        self._ws = None
         self._failure += 1
         if self._failure < 100:
             self._ws = self.Impl(self.uri, self)
@@ -90,3 +93,6 @@ class ReconnectingWebsocket:
 
     def send(self, message: str) -> None:
         self._ws.send(message)
+
+    def is_connected(self) -> bool:
+        return self._ws is not None and self._ws.is_connected()
