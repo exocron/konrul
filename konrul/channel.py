@@ -1,3 +1,5 @@
+from weakref import WeakValueDictionary
+
 from .push import Push
 
 
@@ -8,6 +10,7 @@ class Channel:
         self.socket = socket
         self._join_ref = None
         self._events = {}
+        self._pushes = {}
 
     def join(self) -> None:
         if self._join_ref is None:
@@ -16,12 +19,21 @@ class Channel:
 
     def _on_message(self, message: dict) -> None:
         if message["topic"] == self.topic:
-            if message["join_ref"] == self._join_ref or message["join_ref"] is None:
+            if message["event"] == "phx_reply":
+                if message["ref"] == self._join_ref:
+                    pass
+                elif message["ref"] in self._pushes and message["join_ref"] == self._join_ref:
+                    push = self._pushes[message["ref"]]
+                    del self._pushes[message["ref"]]
+                    push._on_message(message)
+            elif message["join_ref"] == self._join_ref or message["join_ref"] is None:
                 if message["ref"] is None and message["event"] in self._events:
-                    self._events[message["event"]](message)
+                    self._events[message["event"]](message["payload"])
 
     def push(self, event: str, args: dict, *, timeout: float = 10) -> None:
-        push = Push(event, args, self, timeout=timeout)
+        ref = self.socket.ref()
+        push = Push(ref, event, args, self, timeout=timeout)
+        self._pushes[ref] = push
         return push
 
     def on(self, event):
