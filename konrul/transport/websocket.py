@@ -69,18 +69,17 @@ class ReconnectingWebsocket:
 
     def __init__(self, uri: str) -> None:
         self.uri = uri
-        self._ws = self.Impl(uri, self)
-        self._failure = 0
+        self._connect()
+
+    def _connect(self) -> None:
+        self._ws = self.Impl(self.uri, self)
 
     def _on_close(self) -> None:
         # delete and create new websocket object
         self._ws = None
-        self._failure += 1
-        if self._failure < 100:
-            self._ws = self.Impl(self.uri, self)
-        else:
-            print("!!! 100 failures in a row, stopping !!!")
-            # TODO: add delay instead of using counter
+        print("websocket closed, retrying in 1 second")
+        loop = asyncio.get_event_loop()
+        loop.call_later(1, self._connect)
 
     def _on_error(self, exc) -> None:
         traceback.print_exception(exc)

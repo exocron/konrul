@@ -19,6 +19,11 @@ class Socket:
         def on_open(self) -> None:
             self.parent._on_open()
 
+        def _on_close(self) -> None:
+            # we have to tell the channels to re-join
+            self.parent._on_reopen()
+            return super()._on_close()
+
     def __init__(self, uri: str, args: dict) -> None:
         uri = urlparse(uri)
         if not uri.scheme or not uri.netloc or not uri.path.startswith("/"):
@@ -64,6 +69,10 @@ class Socket:
         for message in self._queue:
             self.conn.send(message)
         self._queue = []
+
+    def _on_reopen(self) -> None:
+        for c in self._channels.values():
+            c._on_rejoin()
 
     def channel(self, topic: str, args: dict = {}):
         channel = Channel(topic, args, self)

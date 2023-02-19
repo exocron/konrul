@@ -15,7 +15,10 @@ class Channel:
     def join(self) -> None:
         if self._join_ref is None:
             self._join_ref = self.socket.ref()
-            self.socket._push(self.topic, "phx_join", self.args, self._join_ref, self._join_ref)
+            self._on_rejoin()
+
+    def _on_rejoin(self) -> None:
+        self.socket._push(self.topic, "phx_join", self.args, self._join_ref, self._join_ref)
 
     def _on_message(self, message: dict) -> None:
         if message["topic"] == self.topic:
